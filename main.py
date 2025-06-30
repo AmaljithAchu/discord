@@ -3,19 +3,45 @@ from discord.ext import commands
 import logging
 from dotenv import load_dotenv
 import os
+from flask import Flask
+import threading
 
+# Load .env variables
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s:%(levelname)s:%(name)s: %(message)s',
+    handlers=[
+        logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    ]
+)
+
+# Set up Discord intents
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
+# Create bot instance
 bot = commands.Bot(command_prefix='!', intents=intents)
-
 secret_role = "Gamer"
 
+# Flask web server
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Hello! The bot's web server is running."
+
+def run_flask():
+    app.run(host="0.0.0.0", port=5000)
+
+# Start Flask server in a thread so it doesn't block the bot
+threading.Thread(target=run_flask).start()
+
+# Discord Bot Events and Commands
 @bot.event
 async def on_ready():
     print(f"We are ready to go in, {bot.user.name}")
@@ -31,7 +57,7 @@ async def on_message(message):
 
     if "shit" in message.content.lower():
         await message.delete()
-        await message.channel.send(f"{message.author.mention} - dont use that word!")
+        await message.channel.send(f"{message.author.mention} - don't use that word!")
 
     await bot.process_commands(message)
 
@@ -82,4 +108,5 @@ async def secret_error(ctx, error):
     if isinstance(error, commands.MissingRole):
         await ctx.send("You do not have permission to do that!")
 
-bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+# Run the bot
+bot.run(token)
